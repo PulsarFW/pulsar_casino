@@ -74,7 +74,7 @@ AddEventHandler('onResourceStart', function(resource)
       local char = exports['pulsar-characters']:FetchCharacterSource(source)
       if char then
         if exports['pulsar-finance']:WalletModify(source, -10000) then
-          exports.ox_inventory:AddItem(char:GetData("SID"), "diamond_vip", 1, {}, 1)
+          exports.ox_inventory:AddItem(source, "diamond_vip", 1, {}, 1)
           DepositCasinoProfit(source, "VIP Card", 10000)
         else
           exports['pulsar-hud']:Notification(source, "error", "Not Enough Cash")
