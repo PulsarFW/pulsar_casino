@@ -5,7 +5,7 @@ client_script("@pulsar-core/exports/cl_error.lua")
 client_script("@pulsar-pwnzor/client/check.lua")
 
 author("Dr Nick")
-version "1.0.1"
+version '1.0.4'
 
 client_scripts({
   "client/**/*.lua",
