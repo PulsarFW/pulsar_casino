@@ -34,7 +34,7 @@ function StartRouletteGame(tableId)
 
         print(string.format("Roulette Game Table: %s Num: %s", tableId, winningBetIndex))
 
-        SetTimeout(30000, function()
+        Citizen.SetTimeout(30000, function()
             _roulette[tableId].Started = true
 
             UpdateRouletteGameState(tableId)
@@ -98,7 +98,7 @@ function CheckRouletteWinners(tableId, bets, winningIndex)
         if (winningIndex == "0" and betId == "37") or (winningIndex == "00" and betId == "38") then
             -- 12 to 1
             totalsWon[v.Source] = math.floor(totalsWon[v.Source] + v.Amount * 12)
-        elseif
+        elseif 
             (betId == "39" and _rouletteGroups.Red[winningIndex]) or
             (betId == "40" and _rouletteGroups.Black[winningIndex]) or
             (betId == "41" and _rouletteGroups.Even[winningIndex]) or
@@ -111,7 +111,7 @@ function CheckRouletteWinners(tableId, bets, winningIndex)
         elseif tonumber(betId) >= 1 and tonumber(betId) <= 36 and tonumber(betId) == tonumber(winningIndex) then
             -- 10 to 1
             totalsWon[v.Source] = math.floor(totalsWon[v.Source] + v.Amount * 10)
-        elseif
+        elseif 
             (betId == "45" and _rouletteGroups.First12[winningIndex]) or
             (betId == "46" and _rouletteGroups.Second12[winningIndex]) or
             (betId == "47" and _rouletteGroups.Third12[winningIndex]) or
@@ -121,7 +121,7 @@ function CheckRouletteWinners(tableId, bets, winningIndex)
         then
             -- 2 to 1
             totalsWon[v.Source] = math.floor(totalsWon[v.Source] + v.Amount * 2)
-        elseif
+        elseif 
             (betId == "51" and _rouletteGroups.Row1[winningIndex]) or
             (betId == "52" and _rouletteGroups.Row2[winningIndex]) or
             (betId == "53" and _rouletteGroups.Row3[winningIndex]) or
@@ -144,9 +144,9 @@ function CheckRouletteWinners(tableId, bets, winningIndex)
 
     for k, v in pairs(totalsWon) do
         if v > 0 then
-            local char = exports['pulsar-characters']:FetchCharacterSource(k)
+            local char = plsr.Fetch:CharacterSource(k)
             if char then
-                if exports['pulsar-casino']:ChipsModify(k, v) then
+                if plsr.Casino.Chips:Modify(k, v) then
                     SendCasinoWonChipsPhoneNotification(k, v)
                 end
 
@@ -158,7 +158,7 @@ function CheckRouletteWinners(tableId, bets, winningIndex)
     for k, v in pairs(totalsLost) do
         if v > 0 then
             UpdateCharacterCasinoStats(k, "roulette", false, v)
-            DepositCasinoProfit(k, "Roulette", v)
+            GiveCasinoFuckingMoney(k, "Roulette", v)
         end
     end
 
@@ -193,7 +193,7 @@ end
 
 AddEventHandler("Casino:Server:Startup", function()
     for k, v in pairs(_rouletteTables) do
-        local data = GetDefaultRouletteData(k, { false, false, false, false }, v.highLimit)
+        local data = GetDefaultRouletteData(k, {false, false, false, false}, v.highLimit)
 
         _roulette[k] = data
         GlobalState[string.format("Casino:Roulette:%s", k)] = data
@@ -203,8 +203,8 @@ AddEventHandler("Casino:Server:Startup", function()
 
     GlobalState["Casino:RouletteConfig"] = _rouletteTables
 
-    exports["pulsar-core"]:RegisterServerCallback("Casino:JoinRoulette", function(source, data, cb)
-        local char = exports['pulsar-characters']:FetchCharacterSource(source)
+    plsr.Callbacks:RegisterServerCallback("Casino:JoinRoulette", function(source, data, cb)
+        local char = plsr.Fetch:CharacterSource(source)
         if not char or _roulettePlayers[source] then
             return cb(false)
         end
@@ -212,7 +212,8 @@ AddEventHandler("Casino:Server:Startup", function()
         local tableId, localChairId = data.table, data.chair
 
         if _roulette[tableId] and not _roulette[tableId].Seats[localChairId] then
-            if _rouletteTables[tableId].isVIP and not exports.ox_inventory:ItemsHas(char:GetData("SID"), 1, "diamond_vip", 1) then
+
+            if _rouletteTables[tableId].isVIP and not plsr.Inventory.Items:Has(char:GetData("SID"), 1, "diamond_vip", 1) then
                 return cb(false, "vip")
             end
 
@@ -240,8 +241,8 @@ AddEventHandler("Casino:Server:Startup", function()
         end
     end)
 
-    exports["pulsar-core"]:RegisterServerCallback("Casino:LeaveRoulette", function(source, data, cb)
-        --local char = exports['pulsar-characters']:FetchCharacterSource(source)
+    plsr.Callbacks:RegisterServerCallback("Casino:LeaveRoulette", function(source, data, cb)
+        --local char = plsr.Fetch:CharacterSource(source)
         local blackjackPlayer = _roulettePlayers[source]
         if not blackjackPlayer then
             return cb(false)
@@ -259,8 +260,8 @@ AddEventHandler("Casino:Server:Startup", function()
     end)
 
     -- Bets
-    exports["pulsar-core"]:RegisterServerCallback("Casino:BetRoulette", function(source, data, cb)
-        --local char = exports['pulsar-characters']:FetchCharacterSource(source)
+    plsr.Callbacks:RegisterServerCallback("Casino:BetRoulette", function(source, data, cb)
+        --local char = plsr.Fetch:CharacterSource(source)
         local roulettePlayer = _roulettePlayers[source]
         if not roulettePlayer or not data then
             return cb(false)
@@ -273,7 +274,7 @@ AddEventHandler("Casino:Server:Startup", function()
 
         if (amount >= 100) and _roulette[roulettePlayer.Table] and not _roulette[roulettePlayer.Table].Started and _roulette[roulettePlayer.Table].Seats[roulettePlayer.LocalChair] then
             if (_roulette[roulettePlayer.Table].Seats[roulettePlayer.LocalChair].TotalBet + amount) <= _rouletteTables[roulettePlayer.Table].maxBet then
-                if exports['pulsar-casino']:ChipsModify(source, -amount) then
+                if plsr.Casino.Chips:Modify(source, -amount) then
                     --SendCasinoSpentChipsPhoneNotification(source, amount)
 
                     if amount > 10000 then
@@ -297,16 +298,15 @@ AddEventHandler("Casino:Server:Startup", function()
 
                     _roulette[roulettePlayer.Table].Seats[roulettePlayer.LocalChair].TotalBet += data.amount
 
-                    TriggerClientEvent("Casino:Client:RouletteUpdateBets", -1, roulettePlayer.Table,
-                        _roulette[roulettePlayer.Table].Bets)
+                    TriggerClientEvent("Casino:Client:RouletteUpdateBets", -1, roulettePlayer.Table, _roulette[roulettePlayer.Table].Bets)
 
                     cb(true)
                 else
-                    exports['pulsar-hud']:Notification(source, "error", "Not Enough Chips")
+                    plsr.Execute:Client(source, "Notification", "Error", "Not Enough Chips")
                     cb(false)
                 end
             else
-                exports['pulsar-hud']:Notification(source, "error", "Over Table Bet Limit")
+                plsr.Execute:Client(source, "Notification", "Error", "Over Table Bet Limit")
                 cb(false)
             end
         else
@@ -314,22 +314,22 @@ AddEventHandler("Casino:Server:Startup", function()
         end
     end)
 
-    exports["pulsar-chat"]:RegisterAdminCommand("forceroulette", function(source, args, rawCommand)
+    plsr.Chat:RegisterAdminCommand("forceroulette", function(source, args, rawCommand)
         local tid = tonumber(args[1])
         if _roulette[tid] then
             _roulette[tid].Starting = false
             _roulette[tid].Started = false
             StartRouletteGame(tid)
         end
-    end, {
-        help = "[Admin] Force Start Roulette",
-        params = {
-            {
-                name = "Table",
-                help = "Table ID",
-            },
-        },
-    }, 1)
+	end, {
+		help = "[Admin] Force Start Roulette",
+		params = {
+			{
+				name = "Table",
+				help = "Table ID",
+			},
+		},
+	}, 1)
 end)
 
 function HandleCharacterDisconnect(source)

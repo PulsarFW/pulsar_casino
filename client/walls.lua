@@ -43,8 +43,7 @@ function StartCasinoWallsThread()
                 SetTextRenderId(videoWallRenderTarget)
                 SetScriptGfxDrawOrder(4)
                 SetScriptGfxDrawBehindPausemenu(true)
-                DrawInteractiveSprite("Prop_Screen_Vinewood", "BG_Wall_Colour_4x4", 0.25, 0.5, 0.5, 1.0, 0.0, 255, 255,
-                    255, 255)
+                DrawInteractiveSprite("Prop_Screen_Vinewood", "BG_Wall_Colour_4x4", 0.25, 0.5, 0.5, 1.0, 0.0, 255, 255, 255, 255)
                 DrawTvChannel(0.5, 0.5, 1.0, 1.0, 0.0, 255, 255, 255, 255)
                 SetTextRenderId(GetDefaultScriptRendertargetRenderId())
             end

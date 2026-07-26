@@ -18,7 +18,7 @@ function StartCasinoBackgroundAudioThread()
 
         while _insideCasinoAudio do
             if not IsStreamPlaying() and LoadStream("casino_walla", "DLC_VW_Casino_Interior_Sounds") then
-                PlayStreamFromPosition(996.13, 38.48, 71.07)
+                PlayStreamFromPosition(996.13,38.48,71.07)
             end
 
             if IsStreamPlaying() and not IsAudioSceneActive("DLC_VW_Casino_General") then

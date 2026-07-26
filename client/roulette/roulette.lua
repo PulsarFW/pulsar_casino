@@ -28,55 +28,42 @@ AddEventHandler("Casino:Client:Startup", function()
     CreateModelSwap(1022.197, 60.580, 69.865, 2.0, `vw_prop_casino_blckjack_01b`, `vw_prop_casino_roulette_01b`, 0)
     CreateModelSwap(1029.776, 62.375, 69.865, 2.0, `vw_prop_casino_blckjack_01b`, `vw_prop_casino_roulette_01b`, 0)
 
-    for k, v in pairs(_rouletteTables) do
+    for k,v in pairs(_rouletteTables) do
         local maxBet = formatNumberToCurrency(math.floor(_rouletteTablesConfig[k].maxBet))
-        exports.ox_target:addBoxZone({
-            id = "casino-roulette-" .. k,
-            coords = v.polyzone.center,
-            size = vector3(v.polyzone.length, v.polyzone.width, 2.0),
-            rotation = v.polyzone.options.heading or 0,
-            debug = false,
-            minZ = v.polyzone.options.minZ,
-            maxZ = v.polyzone.options.maxZ,
-            options = {
-                {
-                    icon = "fas fa-diamond",
-                    label = _rouletteTablesConfig[k].isVIP and string.format("Join VIP Game ($%s Max Bet)", maxBet) or
-                        string.format("Join Game ($%s Max Bet)", maxBet),
-                    onSelect = function()
-                        TriggerEvent("Casino:Client:JoinRoulette", { table = k })
-                    end,
-                    canInteract = function()
-                        return CanJoinRouletteTable(k) and not _rouletteAtTable and GlobalState["CasinoOpen"]
-                    end,
-                },
-                {
-                    icon = "fas fa-diamond",
-                    label = "Game Full",
-                    canInteract = function()
-                        return not CanJoinRouletteTable(k) and not _rouletteAtTable
-                    end,
-                },
-                {
-                    icon = "fas fa-diamond",
-                    label = "Leave Game",
-                    onSelect = function()
-                        TriggerEvent("Casino:Client:LeaveRoulette", { table = k })
-                    end,
-                    canInteract = function()
-                        return _rouletteAtTable and not GlobalState[string.format("Casino:Roulette:%s", k)]?.Started and
-                            not _rouletteHasChipsPlaced
-                    end,
-                },
-            }
-        })
+        plsr.Targeting.Zones:AddBox("casino-roulette-" .. k, "credit-card", v.polyzone.center, v.polyzone.length, v.polyzone.width, v.polyzone.options, {
+            {
+                icon = "credit-card",
+                text = _rouletteTablesConfig[k].isVIP and string.format("Join VIP Game ($%s Max Bet)", maxBet) or string.format("Join Game ($%s Max Bet)", maxBet),
+                event = "Casino:Client:JoinRoulette",
+                data = { table = k },
+                isEnabled = function()
+                    return CanJoinRouletteTable(k) and not _rouletteAtTable and GlobalState["CasinoOpen"]
+                end,
+            },
+            {
+                icon = "credit-card",
+                text = "Game Full",
+                isEnabled = function()
+                    return not CanJoinRouletteTable(k) and not _rouletteAtTable
+                end,
+            },
+            {
+                icon = "credit-card",
+                text = "Leave Game",
+                event = "Casino:Client:LeaveRoulette",
+                data = { table = k },
+                isEnabled = function()
+                    return _rouletteAtTable and not GlobalState[string.format("Casino:Roulette:%s", k)]?.Started and not _rouletteHasChipsPlaced
+                end,
+            },
+        }, 1.5, true)
     end
 
-    exports["pulsar-kbs"]:Add("casino_camera", "C", "keyboard", "Casino - Change Roulette Camera", function()
-        if _rouletteAtTable then
+    plsr.Keybinds:Add("casino_camera", "C", "keyboard", "Casino - Change Roulette Camera", function()
+		if _rouletteAtTable then
             RouletteChangeCameraMode(_rouletteAtTable)
         end
-    end)
+	end)
 end)
 
 RegisterNetEvent('Characters:Client:Logout')
@@ -100,10 +87,8 @@ AddEventHandler("Casino:Client:Enter", function()
     for k, v in pairs(_rouletteTables) do
         local serverData = _rouletteTablesConfig[k]
 
-        local pedCoords = GetObjectOffsetFromCoords(v.table.coords.x, v.table.coords.y, v.table.coords.z, v.table
-            .heading, 0.0, 0.7, 1.0)
-        local dealer = CreatePed(26, serverData.dealerVariation >= 8 and `s_f_y_casino_01` or `s_m_y_casino_01`,
-            pedCoords, v.table.heading + 180.0, false, true)
+        local pedCoords = GetObjectOffsetFromCoords(v.table.coords.x, v.table.coords.y, v.table.coords.z, v.table.heading, 0.0, 0.7, 1.0)
+        local dealer = CreatePed(26, serverData.dealerVariation >= 8 and `s_f_y_casino_01` or `s_m_y_casino_01`, pedCoords, v.table.heading + 180.0, false, true)
         SetEntityCanBeDamaged(dealer, 0)
         FreezeEntityPosition(dealer, true)
         SetPedAsEnemy(dealer, 0)
@@ -131,12 +116,10 @@ AddEventHandler("Casino:Client:Enter", function()
     for k, v in pairs(_rouletteTables) do
         local serverData = _rouletteTablesConfig[k]
 
-        local table = GetClosestObjectOfType(v.table.coords.x, v.table.coords.y, v.table.coords.z, 1.0, v.table.prop, 0,
-            0, 0)
+        local table = GetClosestObjectOfType(v.table.coords.x, v.table.coords.y, v.table.coords.z, 1.0, v.table.prop, 0, 0, 0)
         while table == 0 do
             Wait(250)
-            table = GetClosestObjectOfType(v.table.coords.x, v.table.coords.y, v.table.coords.z, 1.0, v.table.prop, 0, 0,
-                0)
+            table = GetClosestObjectOfType(v.table.coords.x, v.table.coords.y, v.table.coords.z, 1.0, v.table.prop, 0, 0, 0)
         end
 
         if GetObjectTextureVariation(table) ~= serverData.tableVariation then
@@ -160,7 +143,7 @@ end)
 function CanJoinRouletteTable(table)
     local bj = GlobalState[string.format("Casino:Roulette:%s", table)]
     if bj?.Seats then
-        for k, v in pairs(bj.Seats) do
+        for k,v in pairs(bj.Seats) do
             if not v then
                 return true
             end
@@ -169,81 +152,78 @@ function CanJoinRouletteTable(table)
     return false
 end
 
-AddEventHandler("Casino:Client:JoinRoulette", function(data)
+AddEventHandler("Casino:Client:JoinRoulette", function(_, data)
     local chairData = GetClosestRouletteChair(data.table)
 
     if chairData then
-        exports["pulsar-core"]:ServerCallback("Casino:JoinRoulette", { table = data.table, chair = chairData.chairId },
-            function(success, table, chair)
-                if success then
-                    _inSittingDownAnimation = true
+        plsr.Callbacks:ServerCallback("Casino:JoinRoulette", { table = data.table, chair = chairData.chairId }, function(success, table, chair)
+            if success then
+                _inSittingDownAnimation = true
 
-                    _rouletteAtTable = table
-                    _rouletteAtLocalChair = chair
+                _rouletteAtTable = table
+                _rouletteAtLocalChair = chair
 
-                    LocalPlayer.state.playingCasino = true
+                plsr.State.flags.playingCasino = true
 
-                    exports['pulsar-animations']:EmotesForceCancel()
-                    TriggerEvent('ox_inventory:disarm', LocalPlayer.state.ped, true)
+                plsr.Animations.Emotes:ForceCancel()
+                plsr.Weapons:UnequipIfEquippedNoAnim()
+
+                if _rouletteStatebagHandler then
+                    RemoveStateBagChangeHandler(_rouletteStatebagHandler)
+                    _rouletteStatebagHandler = nil
+                end
+
+                _rouletteStatebagHandler = AddStateBagChangeHandler(string.format("Casino:Roulette:%s", tableId), nil, function(bagName, key, value, _unused, replicated)
+                    if _insideCasino and _rouletteAtTable then
+                        ShowRouletteGameStateUI(value)
+                    end
+                end)
+
+                RouletteSitDownAnim(chairData)
+
+                _rouletteForceIdle = true
+
+                RouletteEnableCamera(_rouletteAtTable, true)
+
+                if _rouletteTableData[_rouletteAtTable].startTime then
+                    RouletteBetRenderState(_rouletteAtTable, true)
+                    RouletteHoverNumbers(_rouletteAtTable, {})
+
+                    ShowRouletteGameStateUI(GlobalState[string.format("Casino:Roulette:%s", _rouletteAtTable)])
+                end
+
+                CreateThread(function()
+                    while _rouletteAtTable do
+                        if _rouletteForceIdle then
+                            TaskPlayAnim(PlayerPedId(), "anim_casino_b@amb@casino@games@shared@player@", "idle_cardgames", 1.0, 1.0, -1, 0)
+                        end
+                        Wait(5)
+                    end
 
                     if _rouletteStatebagHandler then
                         RemoveStateBagChangeHandler(_rouletteStatebagHandler)
                         _rouletteStatebagHandler = nil
                     end
 
-                    _rouletteStatebagHandler = AddStateBagChangeHandler(string.format("Casino:Blackjack:%s", tableId),
-                        nil, function(bagName, key, value, _unused, replicated)
-                            if _insideCasino and _rouletteAtTable then
-                                ShowRouletteGameStateUI(value)
-                            end
-                        end)
+                    plsr.InfoOverlay:Close()
 
-                    RouletteSitDownAnim(chairData)
-
-                    _rouletteForceIdle = true
-
-                    RouletteEnableCamera(_rouletteAtTable, true)
-
-                    if _rouletteTableData[_rouletteAtTable].startTime then
-                        RouletteBetRenderState(_rouletteAtTable, true)
-                        RouletteHoverNumbers(_rouletteAtTable, {})
-
-                        ShowRouletteGameStateUI(GlobalState[string.format("Casino:Roulette:%s", _rouletteAtTable)])
-                    end
-
-                    CreateThread(function()
-                        while _rouletteAtTable do
-                            if _rouletteForceIdle then
-                                TaskPlayAnim(LocalPlayer.state.ped, "anim_casino_b@amb@casino@games@shared@player@",
-                                    "idle_cardgames", 1.0, 1.0, -1, 0)
-                            end
-                            Wait(5)
-                        end
-
-                        if _rouletteStatebagHandler then
-                            RemoveStateBagChangeHandler(_rouletteStatebagHandler)
-                            _rouletteStatebagHandler = nil
-                        end
-
-                        exports['pulsar-hud']:InfoOverlayClose()
-
-                        LocalPlayer.state.playingCasino = false
-                    end)
+                    plsr.State.flags.playingCasino = false
+                end)
+            else
+                if table == "vip" then
+                    plsr.Notification:Error("You're Not a VIP Loser")
                 else
-                    if table == "vip" then
-                        exports["pulsar-hud"]:Notification("error", "You're Not a VIP Loser")
-                    else
-                        exports["pulsar-hud"]:Notification("error", "Someone Is Sat There")
-                    end
+                    plsr.Notification:Error("Someone Is Sat There")
                 end
-            end)
+            end
+        end)
     else
-        exports["pulsar-hud"]:Notification("error", "Too Far From Chair")
+        plsr.Notification:Error("Too Far From Chair")
     end
 end)
 
 function LeaveRoulette(skipAnim)
-    exports["pulsar-core"]:ServerCallback("Casino:LeaveRoulette", {}, function(success)
+    plsr.Callbacks:ServerCallback("Casino:LeaveRoulette", {}, function(success)
         if success then
             if not skipAnim then
                 RouletteStandUpAnim(_rouletteAtLocalChair)
@@ -255,21 +235,21 @@ function LeaveRoulette(skipAnim)
 
             _rouletteAtTable = false
             _rouletteAtLocalChair = false
-            exports['pulsar-hud']:InfoOverlayClose()
+            plsr.InfoOverlay:Close()
 
             if not skipAnim then
                 Wait(3000)
             end
 
             NetworkStopSynchronisedScene(ROULETTE_SITTING_SCENE)
-            ClearPedTasksImmediately(LocalPlayer.state.ped)
+            ClearPedTasksImmediately(PlayerPedId())
 
-            LocalPlayer.state.playingCasino = false
+            plsr.State.flags.playingCasino = false
         end
     end)
 end
 
-AddEventHandler("Casino:Client:LeaveRoulette", function(data)
+AddEventHandler("Casino:Client:LeaveRoulette", function(_, data)
     if _rouletteAtTable and data?.table == _rouletteAtTable then
         LeaveRoulette(false)
     end
@@ -277,8 +257,7 @@ end)
 
 RegisterNetEvent("Casino:Client:RouletteGameStarting", function(tableId)
     if _insideCasino then
-        PlayAmbientSpeech1(_rouletteDealerPeds[tableId], "MINIGAME_DEALER_PLACE_CHIPS",
-            "SPEECH_PARAMS_FORCE_NORMAL_CLEAR", 1)
+        PlayAmbientSpeech1(_rouletteDealerPeds[tableId], "MINIGAME_DEALER_PLACE_CHIPS", "SPEECH_PARAMS_FORCE_NORMAL_CLEAR", 1)
         _rouletteTableData[tableId].startTime = GetGameTimer() + 28000
 
         if tableId == _rouletteAtTable then
@@ -341,7 +320,7 @@ function RoulettePlaceChips(betType)
     end
 
     if betAmount then
-        exports["pulsar-core"]:ServerCallback("Casino:BetRoulette", {
+        plsr.Callbacks:ServerCallback("Casino:BetRoulette", {
             amount = betAmount,
             betId = betType,
         }, function(success)
@@ -393,7 +372,7 @@ function GetRouletteBetAmount()
     if res?.success and res?.data?.confirmBet then
         return res.data.confirmBet
     elseif res?.timeout then
-        exports["pulsar-hud"]:Notification("error", "Ran Out of Time...")
+        plsr.Notification:Error("Ran Out of Time...")
     end
     return false
 end
@@ -425,7 +404,7 @@ function CleanupRoulette()
         shouldForceIdleCardGames = false
 
         NetworkStopSynchronisedScene(syncedScene)
-        ClearPedTasksImmediately(LocalPlayer.state.ped)
+        ClearPedTasksImmediately(PlayerPedId())
 
         LeaveRoulette(true)
     end
@@ -442,19 +421,18 @@ end)
 
 AddEventHandler("onResourceStop", function(resource)
     if resource == GetCurrentResourceName() then
-        Wait(1000)
         CleanupRoulette()
     end
 end)
 
-local rouletteChairs = { 'Chair_Base_01', 'Chair_Base_02', 'Chair_Base_03', 'Chair_Base_04' }
+local rouletteChairs = {'Chair_Base_01', 'Chair_Base_02', 'Chair_Base_03', 'Chair_Base_04'}
 function GetClosestRouletteChair(tableId)
     local tableData = _rouletteTableData[tableId]
 
     local tableObj = GetRouletteTableObject(tableId)
 
     if tableData and DoesEntityExist(tableObj) then
-        local myPos = GetEntityCoords(LocalPlayer.state.ped)
+        local myPos = GetEntityCoords(PlayerPedId())
         local closest = nil
         local closestCoords = nil
         local lastDist = 1000.0
@@ -471,10 +449,8 @@ function GetClosestRouletteChair(tableId)
 
         if closest and lastDist <= 1.8 then
             return {
-                position = GetWorldPositionOfEntityBone(tableObj,
-                    GetEntityBoneIndexByName(tableObj, rouletteChairs[closest])),
-                rotation = GetWorldRotationOfEntityBone(tableObj,
-                    GetEntityBoneIndexByName(tableObj, rouletteChairs[closest])),
+                position = GetWorldPositionOfEntityBone(tableObj, GetEntityBoneIndexByName(tableObj, rouletteChairs[closest])),
+                rotation = GetWorldRotationOfEntityBone(tableObj, GetEntityBoneIndexByName(tableObj, rouletteChairs[closest])),
                 chairId = closest
             }
         end
@@ -483,16 +459,16 @@ end
 
 function ShowRouletteGameStateUI(state)
     if state.Started then
-        exports['pulsar-hud']:InfoOverlayShow("Roulette", "The Wheel is Spinning")
+        plsr.InfoOverlay:Show("Roulette", "The Wheel is Spinning")
     else
         local myBets = 0
-        local myBalance = formatNumberToCurrency(math.floor(exports['pulsar-casino']:ChipsGet()))
+        local myBalance = formatNumberToCurrency(math.floor(plsr.Casino.Chips:Get()))
         local maxBet = formatNumberToCurrency(math.floor(_rouletteTablesConfig[state.Id]?.maxBet or 0))
         local showStartTime = ""
 
         if state.Bets then
             for k, v in ipairs(state.Bets) do
-                if v and v.Source == LocalPlayer.state.ID then
+                if v and v.Source == plsr.State.flags.ID then
                     myBets += v.Amount
                 end
             end
@@ -508,8 +484,6 @@ function ShowRouletteGameStateUI(state)
             showStartTime = string.format(" - Starts In %s Seconds", startsIn)
         end
 
-        exports['pulsar-hud']:InfoOverlayShow(string.format("Roulette%s", showStartTime),
-            string.format("My Balance: $%s<br><br>Placed Bets: $%s<br>Table Limit: $%s", myBalance,
-                formatNumberToCurrency(math.floor(myBets)), maxBet))
+        plsr.InfoOverlay:Show(string.format("Roulette%s", showStartTime), string.format("My Balance: $%s<br><br>Placed Bets: $%s<br>Table Limit: $%s", myBalance, formatNumberToCurrency(math.floor(myBets)), maxBet))
     end
 end

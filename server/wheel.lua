@@ -10,18 +10,18 @@ AddEventHandler("Casino:Server:Startup", function()
     GlobalState["Casino:WheelLastRotation"] = 0.0
     GlobalState["Casino:WheelLocked"] = false
 
-    exports["pulsar-core"]:RegisterServerCallback("Casino:WheelStart", function(source, data, cb)
+    plsr.Callbacks:RegisterServerCallback("Casino:WheelStart", function(source, data, cb)
         if not GlobalState["Casino:WheelStarted"] then
             if data?.turbo then
-                local char = exports['pulsar-characters']:FetchCharacterSource(source)
+                local char = plsr.Fetch:CharacterSource(source)
 
-                if char and exports['pulsar-finance']:WalletHas(source, 7500) and exports.ox_inventory:ItemsHas(char:GetData("SID"), 1, "diamond_vip", 1) then
+                if char and plsr.Wallet:Has(source, 7500) and plsr.Inventory.Items:Has(char:GetData("SID"), 1, "diamond_vip", 1) then
                     GlobalState["Casino:WheelStarted"] = {
                         Source = source,
                         Turbo = true,
                     }
 
-                    SetTimeout(3000, function()
+                    Citizen.SetTimeout(3000, function()
                         GlobalState["Casino:WheelStarted"] = false
                     end)
 
@@ -30,13 +30,13 @@ AddEventHandler("Casino:Server:Startup", function()
                     cb(false, true)
                 end
             else
-                if exports['pulsar-finance']:WalletHas(source, 1500) then
+                if plsr.Wallet:Has(source, 1500) then
                     GlobalState["Casino:WheelStarted"] = {
                         Source = source,
                         Turbo = false,
                     }
 
-                    SetTimeout(3000, function()
+                    Citizen.SetTimeout(3000, function()
                         GlobalState["Casino:WheelStarted"] = false
                     end)
 
@@ -50,18 +50,18 @@ AddEventHandler("Casino:Server:Startup", function()
         end
     end)
 
-    exports["pulsar-core"]:RegisterServerCallback("Casino:WheelSpin", function(source, data, cb)
-        if GlobalState["Casino:WheelStarted"] and GlobalState["Casino:WheelStarted"].Source == source and exports['pulsar-finance']:WalletModify(source, GlobalState["Casino:WheelStarted"].Turbo and -7500 or -1500) then
+    plsr.Callbacks:RegisterServerCallback("Casino:WheelSpin", function(source, data, cb)
+        if GlobalState["Casino:WheelStarted"] and GlobalState["Casino:WheelStarted"].Source == source and plsr.Wallet:Modify(source, GlobalState["Casino:WheelStarted"].Turbo and -7500 or -1500) then
             GlobalState["Casino:WheelSpinning"] = source
 
             if GlobalState["Casino:WheelStarted"].Turbo then
                 _wheelAccumulator += 7500
-                DepositCasinoProfit(source, "Lucky Wheel", 7500)
+                GiveCasinoFuckingMoney(source, "Lucky Wheel", 7500)
 
                 for i = 1, 5 do
                     local randomPrize = GenerateWheelPrize()
 
-                    SpinTheWheel(randomPrize.slice)
+                    SpinTheFuckingWheel(randomPrize.slice)
 
                     GiveWheelPrize(source, randomPrize)
 
@@ -76,11 +76,11 @@ AddEventHandler("Casino:Server:Startup", function()
                 GlobalState["Casino:WheelSpinning"] = false
             else
                 _wheelAccumulator += 1500
-                DepositCasinoProfit(source, "Lucky Wheel", 1500)
+                GiveCasinoFuckingMoney(source, "Lucky Wheel", 1500)
 
                 local randomPrize = GenerateWheelPrize()
 
-                SpinTheWheel(randomPrize.slice)
+                SpinTheFuckingWheel(randomPrize.slice)
 
                 GiveWheelPrize(source, randomPrize)
             end
@@ -92,15 +92,15 @@ AddEventHandler("Casino:Server:Startup", function()
             _wheelSpins += 1
             if _wheelSpins > 10 then
                 _wheelSpins = 0
-                exports['pulsar-casino']:ConfigSet("wheel-accumulator", _wheelAccumulator)
+                plsr.Casino.Config:Set("wheel-accumulator", _wheelAccumulator)
             end
         else
             cb(false)
         end
     end)
 
-    exports["pulsar-core"]:RegisterServerCallback("Casino:UnlockWheel", function(source, data, cb)
-        if Player(source).state.onDuty == "casino" and GlobalState["Casino:WheelLocked"] then
+    plsr.Callbacks:RegisterServerCallback("Casino:UnlockWheel", function(source, data, cb)
+        if plsr.State:Player(source).onDuty == "casino" and GlobalState["Casino:WheelLocked"] then
             GlobalState["Casino:WheelLocked"] = false
             cb(true)
         else
@@ -112,44 +112,44 @@ AddEventHandler("Casino:Server:Startup", function()
         Wait(250)
     end
 
-    _wheelAccumulator = exports['pulsar-casino']:ConfigGet("wheel-accumulator") or 0
+    _wheelAccumulator = plsr.Casino.Config:Get("wheel-accumulator") or 0
 end)
 
 AddEventHandler("Core:Server:ForceSave", function()
-    exports['pulsar-casino']:ConfigSet("wheel-accumulator", _wheelAccumulator)
+	plsr.Casino.Config:Set("wheel-accumulator", _wheelAccumulator)
 end)
 
 function GenerateWheelPrize()
     local prizes = GetWheelPrizeConfig()
 
     if _wheelAccumulator >= 120000 then
-        table.insert(prizes, { 1, { slice = 7, type = "cash", value = 90000 } })
+        table.insert(prizes, {1, { slice = 7, type = "cash", value = 90000 }})
     end
 
     if _wheelAccumulator >= 200000 and math.random(9) == 4 then
-        table.insert(prizes, { 1, { slice = 12, type = "mystery" } })
+        table.insert(prizes, {1, { slice = 12, type = "mystery" }})
     end
 
     if _wheelAccumulator >= 200000 and math.random(20) == 13 then
-        table.insert(prizes, { 3, { slice = 20, type = "cash", value = 150000, bigWin = true } })
+        table.insert(prizes, {3, { slice = 20, type = "cash", value = 150000, bigWin = true }})
     end
 
     if _wheelAccumulator >= 2000000 and math.random(17) == 7 then -- This might be too low paired with 2 randoms
-        table.insert(prizes, { 5, { slice = 5, type = "house", bigWin = true } })
-        table.insert(prizes, { 5, { slice = 19, type = "vehicle", bigWin = true } })
+        table.insert(prizes, {5, { slice = 5, type = "house", bigWin = true }})
+        table.insert(prizes, {5, { slice = 19, type = "vehicle", bigWin = true }})
     end
 
-    local randomPrize = exports['pulsar-core']:UtilsWeightedRandom(prizes)
+    local randomPrize = plsr.Utils:WeightedRandom(prizes)
 
     if randomPrize.bigWin then
-        exports['pulsar-casino']:ConfigSet("wheel-accumulator", 0)
+        plsr.Casino.Config:Set("wheel-accumulator", 0)
         _wheelAccumulator = 0
     end
 
     return randomPrize
 end
 
-function SpinTheWheel(slice)
+function SpinTheFuckingWheel(slice)
     local p = promise.new()
     local offset = math.random(2, 16)
     local spins = math.random(6, 12)
@@ -159,7 +159,7 @@ function SpinTheWheel(slice)
 
     TriggerClientEvent("Casino:Client:SpinWheel", -1)
 
-    SetTimeout(math.random(3, 5) * 1000, function()
+    Citizen.SetTimeout(math.random(3, 5) * 1000, function()
         GlobalState["Casino:WheelLastRotation"] = finalRotation
         TriggerClientEvent("Casino:Client:WheelLastRotation", -1, finalRotation)
 
@@ -172,7 +172,7 @@ function SpinTheWheel(slice)
 end
 
 function GiveWheelPrize(source, randomPrize)
-    local char = exports['pulsar-characters']:FetchCharacterSource(source)
+    local char = plsr.Fetch:CharacterSource(source)
     if char then
         local winValue = 0
 
@@ -190,7 +190,7 @@ function GiveWheelPrize(source, randomPrize)
                 end
             end
 
-            if exports['pulsar-finance']:WalletModify(source, value) then
+            if plsr.Wallet:Modify(source, value) then
                 winValue = value
 
                 if value >= 90000 then
@@ -209,14 +209,14 @@ function GiveWheelPrize(source, randomPrize)
                 end
             end
 
-            if exports['pulsar-casino']:ChipsModify(source, value) then
+            if plsr.Casino.Chips:Modify(source, value) then
                 SendCasinoWonChipsPhoneNotification(source, value)
-
+                
                 winValue = value
                 _wheelAccumulator -= value
             end
         elseif randomPrize.type == "alcohol" then
-            exports.ox_inventory:LootCustomWeightedSetWithCount({
+            plsr.Loot:CustomWeightedSetWithCount({
                 { 25, { name = "diamond_drink", min = 1, max = 1 } },
                 { 25, { name = "wine_glass", min = 1, max = 1 } },
                 { 25, { name = "whiskey_glass", min = 1, max = 1 } },
@@ -234,15 +234,13 @@ function GiveWheelPrize(source, randomPrize)
         elseif randomPrize.type == "house" then
             SaveCasinoBigWin(source, "wheel", "Won Real Estate Discount Prize", randomPrize)
 
-            SendCasinoPhoneNotification(source, "Real Estate Discount Won!",
-                "Please contact casino staff to claim your prize.", 10000)
+            SendCasinoPhoneNotification(source, "Real Estate Discount Won!", "Please contact casino staff to claim your prize.", 10000)
 
             --SetPrizeDisabled(randomPrize.slice, 7)
         elseif randomPrize.type == "mystery" then
             SaveCasinoBigWin(source, "wheel", "Won Mystery Prize", randomPrize)
 
-            SendCasinoPhoneNotification(source, "Mystery Prize Won!", "Please contact casino staff to claim your prize.",
-                10000)
+            SendCasinoPhoneNotification(source, "Mystery Prize Won!", "Please contact casino staff to claim your prize.", 10000)
 
             --SetPrizeDisabled(randomPrize.slice, 7)
         end

@@ -1,19 +1,20 @@
 _insideCasino = false
 _insideCasinoAudio = false
+_CASINO = _CASINO or {}
 
-AddEventHandler('onClientResourceStart', function(resource)
-	if resource == GetCurrentResourceName() then
-		Wait(1000)
-		TriggerEvent("Casino:Client:Startup")
-	end
+CreateThread(function()
+	TriggerEvent("Casino:Client:Startup")
+end)
+
+AddEventHandler("Proxy:Shared:RegisterReady", function()
+	exports["pulsar_core"]:RegisterComponent("Casino", _CASINO)
 end)
 
 RegisterNetEvent("Characters:Client:Spawn")
 AddEventHandler("Characters:Client:Spawn", function()
-	exports["pulsar-blips"]:Add("casino", "Diamond Casino & Resort", vector3(956.586, 36.004, 71.429), 680, 22, 1.0, 2,
-		11)
+	plsr.Blips:Add("casino", "Diamond Casino & Resort", vector3(956.586, 36.004, 71.429), 680, 22, 1.0, 2, 11)
 
-	LocalPlayer.state.playingCasino = false
+	plsr.State.flags.playingCasino = false
 end)
 
 AddEventHandler("Casino:Client:Startup", function()
@@ -43,91 +44,93 @@ AddEventHandler("Casino:Client:Startup", function()
 	}
 
 	for k, v in ipairs(casinoDesks) do
-		exports.ox_target:addBoxZone({
-			id = "casino-employee-" .. k,
-			coords = v.center,
-			size = vector3(v.length, v.width, 1.0),
-			rotation = v.options.heading or 0,
-			debug = false,
-			minZ = v.options.minZ,
-			maxZ = v.options.maxZ,
-			options = {
-				{
-					icon = "fas fa-clipboard-check",
-					label = "Clock In",
-					onSelect = function()
-						TriggerEvent("Casino:Client:ClockIn", { job = "casino" })
-					end,
-					groups = { "casino" },
-					reqOffDuty = true,
+		plsr.Targeting.Zones:AddBox("casino-employee-" .. k, "coins", v.center, v.length, v.width, v.options, {
+			{
+				icon = "clipboard-list",
+				text = "Clock In",
+				event = "Casino:Client:ClockIn",
+				data = { job = "casino" },
+				jobPerms = {
+					{
+						job = "casino",
+						reqOffDuty = true,
+					},
 				},
-				{
-					icon = "fas fa-clipboard",
-					label = "Clock Out",
-					onSelect = function()
-						TriggerEvent("Casino:Client:ClockOut", { job = "casino" })
-					end,
-					groups = { "casino" },
-					reqDuty = true,
+			},
+			{
+				icon = "clipboard-list",
+				text = "Clock Out",
+				event = "Casino:Client:ClockOut",
+				data = { job = "casino" },
+				jobPerms = {
+					{
+						job = "casino",
+						reqDuty = true,
+					},
 				},
-				{
-					icon = "fas fa-door-closed",
-					label = "Close Casino",
-					onSelect = function()
-						TriggerEvent("Casino:Client:OpenClose", { state = false })
-					end,
-					groups = { "casino" },
-					reqDuty = true,
-					canInteract = function()
-						return GlobalState["CasinoOpen"]
-					end,
+			},
+			{
+				icon = "coins",
+				text = "Close Casino",
+				event = "Casino:Client:OpenClose",
+				data = { state = false },
+				jobPerms = {
+					{
+						job = "casino",
+						reqDuty = true,
+					},
 				},
-				{
-					icon = "fas fa-door-open",
-					label = "Open Casino",
-					onSelect = function()
-						TriggerEvent("Casino:Client:OpenClose", { state = true })
-					end,
-					groups = { "casino" },
-					reqDuty = true,
-					canInteract = function()
-						return not GlobalState["CasinoOpen"]
-					end,
+				isEnabled = function()
+					return GlobalState["CasinoOpen"]
+				end,
+			},
+			{
+				icon = "coins",
+				text = "Open Casino",
+				event = "Casino:Client:OpenClose",
+				data = { state = true },
+				jobPerms = {
+					{
+						job = "casino",
+						reqDuty = true,
+					},
 				},
-			}
-		})
+				isEnabled = function()
+					return not GlobalState["CasinoOpen"]
+				end,
+			},
+		}, 3.0, true)
 	end
 
-	exports['pulsar-pedinteraction']:Add(
+	plsr.PedInteraction:Add(
 		"CasinoStaff1",
 		`u_f_m_casinoshop_01`,
 		vector3(965.357, 48.067, 70.701),
 		146.416,
 		25.0,
 		false,
-		"seal-question",
+		"question",
 		"WORLD_HUMAN_STAND_IMPATIENT"
 	)
-
-	exports['pulsar-pedinteraction']:Add(
+	plsr.PedInteraction:Add(
 		"CasinoStaff2",
 		`s_m_y_casino_01`,
 		vector3(951.773, 21.896, 70.904),
 		346.697,
 		25.0,
 		false,
-		"seal-question",
+		"question",
 		"WORLD_HUMAN_GUARD_STAND"
 	)
 
-	exports['pulsar-polyzone']:CreateBox("casino_inside", vector3(1004.77, 38.26, 77.91), 129.2, 90.0, {
+	plsr.Polyzone.Create:Box("casino_inside", vector3(1004.77, 38.26, 77.91), 129.2, 90.0, {
 		heading = 305,
 		--debugPoly=true,
 		minZ = 62.71,
 		maxZ = 78.11,
 	}, {})
 
-	exports['pulsar-polyzone']:CreatePoly("casino_audio", {
+	plsr.Polyzone.Create:Poly("casino_audio", {
 		vector2(1031.4703369141, 69.031555175781),
 		vector2(1029.1315917969, 70.45630645752),
 		vector2(1020.2162475586, 74.967506408691),
@@ -162,45 +165,41 @@ AddEventHandler("Casino:Client:Startup", function()
 		maxZ = 74.785,
 	})
 
-	exports['pulsar-pedinteraction']:Add(
+	plsr.PedInteraction:Add(
 		"CasinoCashier",
 		`s_m_y_casino_01`,
 		vector3(990.372, 31.271, 70.466),
 		56.249,
 		25.0,
-		false,
-		"seal-question"
+		{},
+		"question"
 	)
 
-	exports.ox_target:addBoxZone({
-		id = "casino-cashier",
-		coords = vector3(990.35, 31.18, 71.47),
-		size = vector3(5.4, 2.0, 2.8),
-		rotation = 330,
-		debug = false,
+	plsr.Targeting.Zones:AddBox("casino-cashier", "credit-card", vector3(990.35, 31.18, 71.47), 5.4, 2, {
+		heading = 330,
+		--debugPoly=true,
 		minZ = 70.47,
 		maxZ = 73.27,
-		options = {
-			{
-				icon = "fas fa-inbox",
-				label = "Cash Out Chips",
-				event = "Casino:Client:StartChipSell",
-				canInteract = function()
-					return exports['pulsar-casino']:ChipsGet() > 0
-				end,
-			},
-			{
-				icon = "fas fa-inbox",
-				label = "Purchase Chips",
-				event = "Casino:Client:StartChipPurchase",
-			},
-			{
-				icon = "fas fa-gift",
-				label = "Purchase VIP Card ($10,000, 1 Week)",
-				event = "Casino:Client:PurchaseVIP",
-			},
-		}
-	})
+	}, {
+		{
+			icon = "inbox-out",
+			text = "Cash Out Chips",
+			event = "Casino:Client:StartChipSell",
+			isEnabled = function()
+				return plsr.Casino.Chips:Get() > 0
+			end,
+		},
+		{
+			icon = "inbox-in",
+			text = "Purchase Chips",
+			event = "Casino:Client:StartChipPurchase",
+		},
+		{
+			icon = "gift-card",
+			text = "Purchase VIP Card ($10,000, 1 Week)",
+			event = "Casino:Client:PurchaseVIP",
+		},
+	}, 3.0, true)
 end)
 
 AddEventHandler("Polyzone:Enter", function(id, testedPoint, insideZones, data)
@@ -223,24 +222,24 @@ AddEventHandler("Polyzone:Exit", function(id, testedPoint, insideZones, data)
 	end
 end)
 
-AddEventHandler("Casino:Client:ClockIn", function(data)
+AddEventHandler("Casino:Client:ClockIn", function(_, data)
 	if data and data.job then
-		exports['pulsar-jobs']:DutyOn(data.job)
+		plsr.Jobs.Duty:On(data.job)
 	end
 end)
 
-AddEventHandler("Casino:Client:ClockOut", function(data)
+AddEventHandler("Casino:Client:ClockOut", function(_, data)
 	if data and data.job then
-		exports['pulsar-jobs']:DutyOff(data.job)
+		plsr.Jobs.Duty:Off(data.job)
 	end
 end)
 
-AddEventHandler("Casino:Client:OpenClose", function(data)
-	exports["pulsar-core"]:ServerCallback("Casino:OpenClose", data)
+AddEventHandler("Casino:Client:OpenClose", function(_, data)
+	plsr.Callbacks:ServerCallback("Casino:OpenClose", data)
 end)
 
-AddEventHandler("Casino:Client:PurchaseVIP", function(data)
-	exports["pulsar-core"]:ServerCallback("Casino:PurchaseVIP", data)
+AddEventHandler("Casino:Client:PurchaseVIP", function(_, data)
+	plsr.Callbacks:ServerCallback("Casino:PurchaseVIP", data)
 end)
 
 RegisterNetEvent("Casino:Client:RefreshInt", function()

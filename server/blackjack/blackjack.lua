@@ -34,7 +34,7 @@ function StartBlackjackGame(tableId)
 
         UpdateBlackjackGameState(tableId)
 
-        SetTimeout(16000, function()
+        Citizen.SetTimeout(16000, function()
             if not _blackjack[tableId].Started then
                 _blackjack[tableId].Timeout = true
             end
@@ -82,12 +82,12 @@ function StartBlackjackGame(tableId)
                             UpdateBlackjackGameState(tableId)
                         end
                     end
-
+    
                     if cardIndex == 1 then
                         local randomCard = math.random(1, 52)
-
+    
                         table.insert(_blackjack[tableId].DealerCards, randomCard)
-
+    
                         TriggerClientEvent(
                             "Casino:Client:BlackjackDealInitialCard",
                             -1,
@@ -98,37 +98,36 @@ function StartBlackjackGame(tableId)
                             GetCurrentBlackjackHand(tableId, "dealer")
                         )
                     end
-
+    
                     Wait(2500)
                     UpdateBlackjackGameState(tableId)
                 end
 
                 _blackjack[tableId].Status = 2
                 UpdateBlackjackGameState(tableId)
-
+    
                 for k, v in pairs(_blackjack[tableId].Seats) do
                     if v and v.Source and v.Cards and v.Joined then
                         local nextCardCount = 2
                         local currentHand = GetCurrentBlackjackHand(tableId, k)
-
+    
                         if currentHand < 21 then
                             TriggerClientEvent("Casino:Client:BlackjackStandOrHit", -1, tableId, k)
-
+    
                             while nextCardCount >= 1 do
                                 local state = "stand"
-                                local response = GetHitStandResponse(v.Source, GetCurrentBlackjackHand(tableId, k),
-                                    nextCardCount == 2, v.Bet)
-
+                                local response = GetHitStandResponse(v.Source, GetCurrentBlackjackHand(tableId, k), nextCardCount == 2, v.Bet)
+    
                                 if response and response.success and response.state then
                                     state = response.state
                                 end
-
+    
                                 if state == "hit" then
                                     nextCardCount += 1
                                     local randomCard = math.random(1, 52)
-
+    
                                     table.insert(v.Cards, randomCard)
-
+    
                                     TriggerClientEvent(
                                         "Casino:Client:BlackjackDealSingleCard",
                                         -1,
@@ -138,21 +137,21 @@ function StartBlackjackGame(tableId)
                                         nextCardCount,
                                         GetCurrentBlackjackHand(tableId, k)
                                     )
-
+    
                                     Wait(2000)
-
+    
                                     UpdateBlackjackGameState(tableId)
                                     local currentHand = GetCurrentBlackjackHand(tableId, k)
-
+    
                                     if currentHand > 21 then
                                         -- Going Bust
                                         TriggerClientEvent("Casino:Client:BlackjackBust", -1, tableId, k)
-
+    
                                         nextCardCount = 0
                                         v.State = "bust"
 
                                         UpdateCharacterCasinoStats(v.Source, "blackjack", false, v.Bet)
-                                        DepositCasinoProfit(v.Source, "Blackjack", v.Bet)
+                                        GiveCasinoFuckingMoney(v.Source, "Blackjack", v.Bet)
                                     elseif currentHand < 21 then
                                         -- Ask Again
                                         TriggerClientEvent("Casino:Client:BlackjackStandOrHit", -1, tableId, k)
@@ -164,14 +163,13 @@ function StartBlackjackGame(tableId)
                                     nextCardCount = 0
                                     v.State = "stand"
                                 elseif state == "double" and nextCardCount == 2 then
-                                    if exports['pulsar-casino']:ChipsModify(v.Source, -v.Bet) then
+                                    if plsr.Casino.Chips:Modify(v.Source, -v.Bet) then
                                         SendCasinoSpentChipsPhoneNotification(v.Source, v.Bet)
                                         v.Bet = v.Bet * 2
 
                                         local randomCard = math.random(1, 52)
 
-                                        TriggerClientEvent("Casino:Client:BlackjackSyncChipsDoubleDown", -1, v.Bet,
-                                            v.Chair)
+                                        TriggerClientEvent("Casino:Client:BlackjackSyncChipsDoubleDown", -1, v.Bet, v.Chair)
 
                                         table.insert(v.Cards, randomCard)
 
@@ -189,17 +187,17 @@ function StartBlackjackGame(tableId)
 
                                         UpdateBlackjackGameState(tableId)
                                         local currentHand = GetCurrentBlackjackHand(tableId, k)
-
+    
                                         if currentHand > 21 then
                                             -- Going Bust
                                             TriggerClientEvent("Casino:Client:BlackjackBust", -1, tableId, k)
-
+        
                                             nextCardCount = 0
                                             v.State = "bust"
-
+    
                                             UpdateCharacterCasinoStats(v.Source, "blackjack", false, v.Bet)
 
-                                            DepositCasinoProfit(v.Source, "Blackjack", v.Bet)
+                                            GiveCasinoFuckingMoney(v.Source, "Blackjack", v.Bet)
                                         end
 
                                         nextCardCount = 0
@@ -241,7 +239,7 @@ function StartBlackjackGame(tableId)
                 local allBusted = true
                 local highestPlayerHand = 0
 
-                for k, v in pairs(_blackjack[tableId].Seats) do
+                for k,v in pairs(_blackjack[tableId].Seats) do
                     if v and v.Source and v.Joined then
                         if v.State == "stand" then
                             allBusted = false
@@ -287,7 +285,7 @@ function StartBlackjackGame(tableId)
                 local sentEveryoneBust = true
                 local cleaningChairs = {}
 
-                for k, v in pairs(_blackjack[tableId].Seats) do
+                for k,v in pairs(_blackjack[tableId].Seats) do
                     if v and v.Source and v.Joined then
                         if v.State == "stand" then
                             local pHand = GetCurrentBlackjackHand(tableId, k)
@@ -296,6 +294,7 @@ function StartBlackjackGame(tableId)
                             local isDealerBust = false
 
                             if pHand <= 21 then
+
                                 if dealerHand > 21 then
                                     isWin = true
                                     -- Win, Dealer Bust
@@ -316,7 +315,7 @@ function StartBlackjackGame(tableId)
                                     isPush = true
                                 else
                                     UpdateCharacterCasinoStats(v.Source, "blackjack", false, v.Bet)
-                                    DepositCasinoProfit(v.Source, "Blackjack", v.Bet)
+                                    GiveCasinoFuckingMoney(v.Source, "Blackjack", v.Bet)
                                 end
                             end
 
@@ -328,15 +327,14 @@ function StartBlackjackGame(tableId)
                                     wonAmount = v.Bet * 2
                                 end
 
-                                if exports['pulsar-casino']:ChipsModify(v.Source, wonAmount) then
+                                if plsr.Casino.Chips:Modify(v.Source, wonAmount) then
                                     SendCasinoWonChipsPhoneNotification(v.Source, wonAmount)
                                 end
 
                                 if isPush then
                                     TriggerClientEvent("Casino:Client:BlackjackDeclarePush", v.Source, tableId, k)
                                 else
-                                    TriggerClientEvent("Casino:Client:BlackjackDeclareWin", v.Source, tableId, k,
-                                        isDealerBust)
+                                    TriggerClientEvent("Casino:Client:BlackjackDeclareWin", v.Source, tableId, k, isDealerBust)
                                 end
                             else
                                 TriggerClientEvent("Casino:Client:BlackjackDeclareLoss", v.Source, tableId, k)
@@ -349,15 +347,14 @@ function StartBlackjackGame(tableId)
                 _blackjack[tableId].Status = 4
                 UpdateBlackjackGameState(tableId)
 
-                TriggerClientEvent("Casino:Client:BlackjackGameFinished", -1, tableId, _blackjack[tableId].SeatsPlayed,
-                    sentDealerBust, sentEveryoneBust)
+                TriggerClientEvent("Casino:Client:BlackjackGameFinished", -1, tableId, _blackjack[tableId].SeatsPlayed, sentDealerBust, sentEveryoneBust)
                 Wait(4000 + (2500 * #_blackjack[tableId].SeatsPlayed))
 
                 _blackjack[tableId].Starting = false
                 _blackjack[tableId].Started = false
 
                 local stillHasActivePlayers = false
-                for k, v in pairs(_blackjack[tableId].Seats) do
+                for k,v in pairs(_blackjack[tableId].Seats) do
                     if v and v.Source then
                         v.Joined = false
 
@@ -407,7 +404,7 @@ AddEventHandler("Casino:Server:Startup", function()
     for k, v in pairs(_blackjackTables) do
         local seats = {}
         for i = 0, 3 do
-            seats[i] = false
+           seats[i] = false
         end
 
         local data = GetDefaultBlackjackData(k, seats, v.bet)
@@ -420,8 +417,8 @@ AddEventHandler("Casino:Server:Startup", function()
 
     GlobalState["Casino:BlackjackConfig"] = _blackjackTables
 
-    exports["pulsar-core"]:RegisterServerCallback("Casino:JoinBlackjack", function(source, chairId, cb)
-        local char = exports['pulsar-characters']:FetchCharacterSource(source)
+    plsr.Callbacks:RegisterServerCallback("Casino:JoinBlackjack", function(source, chairId, cb)
+        local char = plsr.Fetch:CharacterSource(source)
         if not char or _blackjackPlayers[source] then
             return cb(false)
         end
@@ -429,7 +426,8 @@ AddEventHandler("Casino:Server:Startup", function()
         local tableId, localChairId = GetBlackjackTableId(chairId)
 
         if _blackjack[tableId] and not _blackjack[tableId].Seats[localChairId] then
-            if _blackjackTables[tableId].isVIP and not exports.ox_inventory:ItemsHas(char:GetData("SID"), 1, "diamond_vip", 1) then
+
+            if _blackjackTables[tableId].isVIP and not plsr.Inventory.Items:Has(char:GetData("SID"), 1, "diamond_vip", 1) then
                 return cb(false, "vip")
             end
 
@@ -457,8 +455,8 @@ AddEventHandler("Casino:Server:Startup", function()
         end
     end)
 
-    exports["pulsar-core"]:RegisterServerCallback("Casino:LeaveBlackjack", function(source, data, cb)
-        --local char = exports['pulsar-characters']:FetchCharacterSource(source)
+    plsr.Callbacks:RegisterServerCallback("Casino:LeaveBlackjack", function(source, data, cb)
+        --local char = plsr.Fetch:CharacterSource(source)
         local blackjackPlayer = _blackjackPlayers[source]
         if not blackjackPlayer then
             return cb(false)
@@ -475,7 +473,7 @@ AddEventHandler("Casino:Server:Startup", function()
         end
     end)
 
-    exports["pulsar-core"]:RegisterServerCallback("Casino:StartBlackjack", function(source, data, cb)
+    plsr.Callbacks:RegisterServerCallback("Casino:StartBlackjack", function(source, data, cb)
         local blackjackPlayer = _blackjackPlayers[source]
         if not blackjackPlayer then
             return cb(false)
@@ -491,8 +489,8 @@ AddEventHandler("Casino:Server:Startup", function()
     end)
 
     -- Bet Confirmation
-    exports["pulsar-core"]:RegisterServerCallback("Casino:BetBlackjack", function(source, data, cb)
-        --local char = exports['pulsar-characters']:FetchCharacterSource(source)
+    plsr.Callbacks:RegisterServerCallback("Casino:BetBlackjack", function(source, data, cb)
+        --local char = plsr.Fetch:CharacterSource(source)
         local blackjackPlayer = _blackjackPlayers[source]
         if not blackjackPlayer then
             return cb(false)
@@ -503,7 +501,7 @@ AddEventHandler("Casino:Server:Startup", function()
         end
 
         if _blackjack[blackjackPlayer.Table] and _blackjack[blackjackPlayer.Table].Seats[blackjackPlayer.LocalChair] then
-            if exports['pulsar-casino']:ChipsModify(source, -data) then
+            if plsr.Casino.Chips:Modify(source, -data) then
                 SendCasinoSpentChipsPhoneNotification(source, data)
 
                 _blackjack[blackjackPlayer.Table].Seats[blackjackPlayer.LocalChair].Bet = data
@@ -512,7 +510,7 @@ AddEventHandler("Casino:Server:Startup", function()
 
                 cb(true, _blackjack[blackjackPlayer.Table])
             else
-                exports['pulsar-hud']:Notification(source, "error", "Not Enough Chips")
+                plsr.Execute:Client(source, "Notification", "Error", "Not Enough Chips")
                 cb(false)
             end
         else
@@ -533,14 +531,14 @@ end
 
 function GetHitStandResponse(src, currentHand, canDouble, currentBet)
     local p = promise.new()
-    exports["pulsar-core"]:ClientCallback(src, "Casino:Client:RequestHitStand",
-        { currentHand = currentHand, canDouble = canDouble, currentBet = currentBet }, function(success, state)
-            if p then
-                p:resolve({ success = success, state = state })
-            end
-        end)
+    plsr.Callbacks:ClientCallback(src, "Casino:Client:RequestHitStand", { currentHand = currentHand, canDouble = canDouble, currentBet = currentBet }, function(success, state)
 
-    SetTimeout(20000, function()
+        if p then
+            p:resolve({ success = success, state = state })
+        end
+    end)
+
+    Citizen.SetTimeout(20000, function()
         if p then
             p:resolve({ success = false })
         end
@@ -550,6 +548,7 @@ function GetHitStandResponse(src, currentHand, canDouble, currentBet)
     p = nil
     return res
 end
+
 
 function GetCurrentBlackjackHand(tableId, chairId)
     local cards = nil
@@ -564,7 +563,7 @@ function GetCurrentBlackjackHand(tableId, chairId)
         local hand = 0
         local numberOfAces = 0
 
-        for k, v in pairs(cards) do
+        for k,v in pairs(cards) do
             local nextCard = getCardNumberFromCardId(v)
             if nextCard == 11 then
                 numberOfAces = numberOfAces + 1
@@ -573,7 +572,7 @@ function GetCurrentBlackjackHand(tableId, chairId)
             end
         end
 
-        for i = 1, numberOfAces do
+        for i = 1, numberOfAces do 
             if i == 1 then
                 if hand + 11 > 21 then
                     nextCard = 1
@@ -591,7 +590,7 @@ end
 
 function GetBlackjackTableReady(tableId)
     local readyCount = 0
-    for k, v in pairs(_blackjack[tableId].Seats) do
+    for k,v in pairs(_blackjack[tableId].Seats) do
         if v and v.Source then
             if v.Joined then
                 readyCount += 1
@@ -647,12 +646,12 @@ function getCardNumberFromCardId(cardId)
     elseif cardId == 16 then
         return 3
     elseif cardId == 17 then
-        return 4
+        return 4        
     elseif cardId == 18 then
         return 5
     elseif cardId == 19 then
         return 6
-    elseif cardId == 20 then
+    elseif cardId == 20  then
         return 7
     elseif cardId == 21 then
         return 8
@@ -720,3 +719,7 @@ function getCardNumberFromCardId(cardId)
         return 10
     end
 end
+
+
+
+

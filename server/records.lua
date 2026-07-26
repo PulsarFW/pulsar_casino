@@ -1,92 +1,83 @@
+local _casinoTablesReady = false
+function EnsureCasinoTables(callback)
+    if _casinoTablesReady then
+        if callback then
+            callback()
+        end
+        return
+    end
+    plsr.Database:Query(
+        "CREATE TABLE IF NOT EXISTS `casino_statistics` (`id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `sid` BIGINT UNSIGNED NOT NULL, `data` JSON NOT NULL, UNIQUE INDEX `idx_sid` (`sid`))",
+        nil,
+        function()
+            plsr.Database:Query(
+                "CREATE TABLE IF NOT EXISTS `casino_bigwins` (`id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `data` JSON NOT NULL)",
+                nil,
+                function()
+                    plsr.Database:Query(
+                        "CREATE TABLE IF NOT EXISTS `casino_config` (`id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `key` VARCHAR(191) NOT NULL, `data` JSON NULL, UNIQUE INDEX `idx_key` (`key`))",
+                        nil,
+                        function()
+                            _casinoTablesReady = true
+                            if callback then
+                                callback()
+                            end
+                        end
+                    )
+                end
+            )
+        end
+    )
+end
+
 function UpdateCharacterCasinoStats(source, statType, isWin, amount)
-    local char = exports['pulsar-characters']:FetchCharacterSource(source)
+    local char = plsr.Fetch:CharacterSource(source)
     if char then
         local p = promise.new()
-        local update = {}
+        local sid = char:GetData("SID")
 
-        if isWin then
-            update["$inc"] = {
-                TotalAmountWon = amount,
-                [string.format("AmountWon.%s", statType)] = amount,
-            }
-        else
-            update["$inc"] = {
-                TotalAmountLost = amount,
-                [string.format("AmountLost.%s", statType)] = amount,
-            }
-        end
-
-        exports.oxmysql:execute('SELECT * FROM casino_statistics WHERE SID = ?', { char:GetData("SID") },
-            function(existingResults)
-                if existingResults and #existingResults > 0 then
-                    local existing = existingResults[1]
-                    local stats = existing[statType] and json.decode(existing[statType]) or {}
-                    local amountWon = existing.AmountWon and json.decode(existing.AmountWon) or {}
-                    local amountLost = existing.AmountLost and json.decode(existing.AmountLost) or {}
-
-                    table.insert(stats, {
-                        Win = isWin,
-                        Amount = amount,
-                    })
-
-                    if isWin then
-                        existing.TotalAmountWon = (existing.TotalAmountWon or 0) + amount
-                        amountWon[statType] = (amountWon[statType] or 0) + amount
-                    else
-                        existing.TotalAmountLost = (existing.TotalAmountLost or 0) + amount
-                        amountLost[statType] = (amountLost[statType] or 0) + amount
+        EnsureCasinoTables(function()
+            plsr.Database:Single("SELECT `id`, `data` FROM `casino_statistics` WHERE `sid` = ?", { sid }, function(success, row)
+                local stats = { SID = sid }
+                local rowId = nil
+                if success and row ~= nil then
+                    rowId = row.id
+                    local ok, decoded = pcall(json.decode, row.data)
+                    if ok and type(decoded) == "table" then
+                        stats = decoded
                     end
+                end
 
-                    exports.oxmysql:execute(
-                        'UPDATE casino_statistics SET `' ..
-                        statType ..
-                        '` = ?, AmountWon = ?, AmountLost = ?, TotalAmountWon = ?, TotalAmountLost = ? WHERE SID = ?',
-                        { json.encode(stats), json.encode(amountWon), json.encode(amountLost), existing.TotalAmountWon,
-                            existing.TotalAmountLost, char:GetData("SID") },
-                        function(affectedRows)
-                            local success = false
-                            if affectedRows then
-                                if type(affectedRows) == "table" then
-                                    success = affectedRows.affectedRows and affectedRows.affectedRows > 0
-                                else
-                                    success = affectedRows > 0
-                                end
-                            end
-                            p:resolve(success)
-                        end)
+                if not stats[statType] then
+                    stats[statType] = {}
+                end
+                table.insert(stats[statType], { Win = isWin, Amount = amount })
+
+                if isWin then
+                    stats.TotalAmountWon = (stats.TotalAmountWon or 0) + amount
+                    if not stats.AmountWon then
+                        stats.AmountWon = {}
+                    end
+                    stats.AmountWon[statType] = (stats.AmountWon[statType] or 0) + amount
                 else
-                    local stats = { {
-                        Win = isWin,
-                        Amount = amount,
-                    } }
-                    local amountWon = {}
-                    local amountLost = {}
-
-                    if isWin then
-                        amountWon[statType] = amount
-                    else
-                        amountLost[statType] = amount
+                    stats.TotalAmountLost = (stats.TotalAmountLost or 0) + amount
+                    if not stats.AmountLost then
+                        stats.AmountLost = {}
                     end
+                    stats.AmountLost[statType] = (stats.AmountLost[statType] or 0) + amount
+                end
 
-                    exports.oxmysql:execute(
-                        'INSERT INTO casino_statistics (SID, `' ..
-                        statType ..
-                        '`, AmountWon, AmountLost, TotalAmountWon, TotalAmountLost) VALUES (?, ?, ?, ?, ?, ?)',
-                        { char:GetData("SID"), json.encode(stats), json.encode(amountWon), json.encode(amountLost), isWin and
-                        amount or 0, isWin and 0 or amount },
-                        function(insertId)
-                            local success = false
-                            if insertId then
-                                if type(insertId) == "table" then
-                                    success = insertId.insertId and insertId.insertId > 0
-                                else
-                                    success = insertId > 0
-                                end
-                            end
-                            p:resolve(success)
-                        end)
+                if rowId then
+                    plsr.Database:Update("UPDATE `casino_statistics` SET `data` = ? WHERE `id` = ?", { json.encode(stats), rowId }, function(updateSuccess)
+                        p:resolve(updateSuccess and stats or false)
+                    end)
+                else
+                    plsr.Database:Insert("INSERT INTO `casino_statistics` (`sid`, `data`) VALUES (?, ?)", { sid, json.encode(stats) }, function(insertSuccess)
+                        p:resolve(insertSuccess and stats or false)
+                    end)
                 end
             end)
+        end)
 
         local res = Citizen.Await(p)
         return res
@@ -95,32 +86,28 @@ function UpdateCharacterCasinoStats(source, statType, isWin, amount)
 end
 
 function SaveCasinoBigWin(source, machine, prize, data)
-    local char = exports['pulsar-characters']:FetchCharacterSource(source)
+    local char = plsr.Fetch:CharacterSource(source)
     if char then
         local p = promise.new()
 
-        local winnerJson = json.encode({
-            SID = char:GetData("SID"),
-            First = char:GetData("First"),
-            Last = char:GetData("Last"),
-            ID = char:GetData("ID"),
-        })
-        local metaDataJson = json.encode(data)
+        local doc = {
+            Type = machine,
+            Time = os.time(),
+            Winner = {
+                SID = char:GetData("SID"),
+                First = char:GetData("First"),
+                Last = char:GetData("Last"),
+                ID = char:GetData("ID"),
+            },
+            Prize = prize,
+            MetaData = data,
+        }
 
-        exports.oxmysql:execute(
-            'INSERT INTO casino_bigwins (Type, Time, Winner, Prize, MetaData) VALUES (?, ?, ?, ?, ?)',
-            { machine, os.time(), winnerJson, prize, metaDataJson },
-            function(insertId)
-                local success = false
-                if insertId then
-                    if type(insertId) == "table" then
-                        success = insertId.insertId and insertId.insertId > 0
-                    else
-                        success = insertId > 0
-                    end
-                end
+        EnsureCasinoTables(function()
+            plsr.Database:Insert("INSERT INTO `casino_bigwins` (`data`) VALUES (?)", { json.encode(doc) }, function(success)
                 p:resolve(success)
             end)
+        end)
 
         local res = Citizen.Await(p)
         return res

@@ -27,11 +27,11 @@ function CreateCasinoShowcaseVehicle(vehData)
 
     if not vehData then return; end
 
-    exports['pulsar-core']:GameVehiclesSpawnLocal(vector3(975.5, 40.41, 72.21), vehData.vehicle, 0.0, function(veh)
+    plsr.Game.Vehicles:SpawnLocal(vector3(975.5, 40.41, 72.21), vehData.vehicle, 0.0, function(veh)
         _platformVehicle = veh
 
         if vehData.properties then
-            exports['pulsar-vehicles']:PropertiesSet(veh, vehData.properties)
+            plsr.Vehicles.Properties:Set(veh, vehData.properties)
         end
 
         FreezeEntityPosition(veh, true)
@@ -62,14 +62,13 @@ end
 
 function DeleteCasinoShowcaseVehicle()
     if _platformVehicle then
-        exports['pulsar-core']:GameVehiclesDelete(_platformVehicle)
+        plsr.Game.Vehicles:Delete(_platformVehicle)
         _platformVehicle = nil
     end
 end
 
 AddEventHandler("onResourceStop", function(resource)
     if resource == GetCurrentResourceName() then
-        Wait(1000)
         DeleteCasinoShowcaseVehicle()
     end
 end)

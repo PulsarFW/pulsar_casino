@@ -1,21 +1,32 @@
-fx_version("cerulean")
-games({ "gta5" })
-lua54("yes")
-client_script("@pulsar-core/exports/cl_error.lua")
-client_script("@pulsar-pwnzor/client/check.lua")
+fx_version 'cerulean'
+games({ 'gta5' })
 
-author("Dr Nick")
-version '1.0.4'
+name 'Pulsar Casino'
+description 'Diamond Casino games'
+author 'Artmines - maintained for Pulsar Framework'
+url 'https://pulsarframe.work'
+version 'v1.0.0'
 
-client_scripts({
-  "client/**/*.lua",
-})
+version_check 'yes'
+github 'https://github.com/PulsarFW/pulsar_casino'
+
+client_script '@pulsar_core/components/cl_error.lua'
+shared_script '@pulsar_core/core/sh_pulsar.lua'
+client_script '@pulsar_pwnzor/client/check.lua'
+
+author 'Pulsar Team'
+version 'v1.0.0'
+url 'https://pulsarfw.com'
 
 server_scripts({
-  "config/**/*.lua",
-  "server/**/*.lua",
+	'config/**/*.lua',
+	'shared/**/*.lua',
+	'server/**/*.lua',
 })
 
-shared_scripts({
-  "shared/**/*.lua",
+client_scripts({
+	'shared/**/*.lua',
+	'client/**/*.lua',
 })
+
+lua54 'yes'

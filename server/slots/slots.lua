@@ -3,50 +3,50 @@ _slotMachineCount = 44
 
 local slotValues = {
     [1] = "2",
-    [2] = "3",
-    [3] = "6",
-    [4] = "2",
-    [5] = "4",
-    [6] = "1",
-    [7] = "6",
-    [8] = "5",
-    [9] = "2",
-    [10] = "1",
-    [11] = "3",
-    [12] = "6",
-    [13] = "7",
-    [14] = "1",
-    [15] = "4",
-    [16] = "5",
+	[2] = "3",
+	[3] = "6",
+	[4] = "2",
+	[5] = "4",
+	[6] = "1",
+	[7] = "6",
+	[8] = "5",
+	[9] = "2",
+	[10] = "1",
+	[11] = "3",
+	[12] = "6",
+	[13] = "7",
+	[14] = "1",
+	[15] = "4",
+	[16] = "5",
 }
 
 local slotMultipliers = {
     ["1"] = 4,
-    ["2"] = 4,
-    ["3"] = 5,
-    ["4"] = 5,
-    ["5"] = 7,
-    ["6"] = 7,
-    ["7"] = 10,
+	["2"] = 4,
+	["3"] = 5,
+	["4"] = 5,
+	["5"] = 7,
+	["6"] = 7,
+	["7"] = 10,
 }
 
 local slotRandom = {
-    { 15, 1 },
-    { 15, 2 },
-    { 12, 3 }, -- Bigger Prize (6)
-    { 15, 4 },
-    { 15, 5 },
-    { 15, 6 },
-    { 12, 7 }, -- Bigger Prize (6)
-    { 15, 8 },
-    { 15, 9 },
-    { 15, 10 },
-    { 15, 11 },
-    { 12, 12 }, -- Bigger Prize (6)
-    { 15, 13 },
-    { 15, 14 },
-    { 15, 15 },
-    { 15, 16 },
+    {15, 1},
+    {15, 2},
+    {12, 3}, -- Bigger Prize (6)
+    {15, 4},
+    {15, 5},
+    {15, 6},
+    {12, 7}, -- Bigger Prize (6)
+    {15, 8},
+    {15, 9},
+    {15, 10},
+    {15, 11},
+    {12, 12}, -- Bigger Prize (6)
+    {15, 13},
+    {15, 14},
+    {15, 15},
+    {15, 16},
 }
 
 AddEventHandler("Characters:Server:PlayerLoggedOut", function(source, cData)
@@ -72,8 +72,8 @@ AddEventHandler("Casino:Server:Startup", function()
 
     --GlobalState["Casino:SlotMachines"] = _slotMachines
 
-    exports["pulsar-core"]:RegisterServerCallback("Casino:SlotMachineSit", function(source, machineId, cb)
-        local char = exports['pulsar-characters']:FetchCharacterSource(source)
+    plsr.Callbacks:RegisterServerCallback("Casino:SlotMachineSit", function(source, machineId, cb)
+        local char = plsr.Fetch:CharacterSource(source)
         if not char or _slotMachines[machineId] then
             return cb(false)
         end
@@ -92,31 +92,31 @@ AddEventHandler("Casino:Server:Startup", function()
         cb(true)
     end)
 
-    exports["pulsar-core"]:RegisterServerCallback("Casino:SlotMachinePlay", function(source, data, cb)
-        --local char = exports['pulsar-characters']:FetchCharacterSource(source)
+    plsr.Callbacks:RegisterServerCallback("Casino:SlotMachinePlay", function(source, data, cb)
+        --local char = plsr.Fetch:CharacterSource(source)
         local bet = math.floor(data.bet)
 
         if GlobalState["CasinoOpen"] and bet >= 100 and bet <= 2500 then
             for k, v in pairs(_slotMachines) do
                 if v and v.Source == source then
-                    if exports['pulsar-casino']:ChipsModify(source, -bet) then
-                        DepositCasinoProfit(source, "Slots", bet)
+                    if plsr.Casino.Chips:Modify(source, -bet) then
+                        GiveCasinoFuckingMoney(source, "Slots", bet)
                         SendCasinoSpentChipsPhoneNotification(source, bet)
 
                         _slotMachines[k].Spinning = true
 
                         local time = math.random(3, 5) * 1000
                         local sound = "no_win"
-                        local reel1 = exports['pulsar-core']:UtilsWeightedRandom(slotRandom)
-                        local reel2 = exports['pulsar-core']:UtilsWeightedRandom(slotRandom)
-                        local reel3 = exports['pulsar-core']:UtilsWeightedRandom(slotRandom)
+                        local reel1 = plsr.Utils:WeightedRandom(slotRandom)
+                        local reel2 = plsr.Utils:WeightedRandom(slotRandom)
+                        local reel3 = plsr.Utils:WeightedRandom(slotRandom)
 
                         local tripleChance = math.random(100)
                         local canHaveTriple = (tripleChance >= 60 and tripleChance <= 69)
 
                         if not canHaveTriple or slotValues[reel3] == "7" then
                             while slotValues[reel3] == slotValues[reel2] do
-                                reel3 = exports['pulsar-core']:UtilsWeightedRandom(slotRandom)
+                                reel3 = plsr.Utils:WeightedRandom(slotRandom)
                                 Wait(5)
                             end
                         end
@@ -156,12 +156,12 @@ AddEventHandler("Casino:Server:Startup", function()
 
                         winnings = math.floor(winnings)
 
-                        SetTimeout(time, function()
+                        Citizen.SetTimeout(time, function()
                             if _slotMachines[k] then
-                                local char = exports['pulsar-characters']:FetchCharacterSource(source)
+                                local char = plsr.Fetch:CharacterSource(source)
                                 if char then
                                     if winnings > 0 then
-                                        if exports['pulsar-casino']:ChipsModify(source, winnings) then
+                                        if plsr.Casino.Chips:Modify(source, winnings) then
                                             SendCasinoWonChipsPhoneNotification(source, winnings)
                                         end
 
@@ -177,7 +177,7 @@ AddEventHandler("Casino:Server:Startup", function()
 
                         return cb(true, { reel1, reel2, reel3 }, time, sound, winnings)
                     else
-                        exports['pulsar-hud']:Notification(source, "error", "Not Enough Chips")
+                        plsr.Execute:Client(source, "Notification", "Error", "Not Enough Chips")
                         return cb(false)
                     end
                 end
@@ -189,8 +189,8 @@ AddEventHandler("Casino:Server:Startup", function()
         end
     end)
 
-    exports["pulsar-core"]:RegisterServerCallback("Casino:SlotMachineLeave", function(source, data, cb)
-        local char = exports['pulsar-characters']:FetchCharacterSource(source)
+    plsr.Callbacks:RegisterServerCallback("Casino:SlotMachineLeave", function(source, data, cb)
+        local char = plsr.Fetch:CharacterSource(source)
         if not char then
             return cb(false)
         end

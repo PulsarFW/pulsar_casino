@@ -1,23 +1,23 @@
-local priceLevels = { 100, 500, 1000, 5000, 10000, 50000 }
+local priceLevels = {100, 500, 1000, 5000, 10000, 50000}
 
 AddEventHandler("Casino:Client:StartChipPurchase", function()
-    if not LocalPlayer.state.Character then
+    if not plsr.State.flags.loggedIn then
         return
     end
 
-    local cash = LocalPlayer.state.Character:GetData("Cash") or 0
-    local chips = exports['pulsar-casino']:ChipsGet()
+    local cash = plsr.State.character.Cash or 0
+    local chips = plsr.Casino.Chips:Get()
 
     local buyMenu = {
         main = {
             label = "Purchase Casino Chips",
-            items = {
-                {
-                    --label = "Current Chip Balance",
-                    label = string.format("You Have $%s Worth of Chips", formatNumberToCurrency(math.floor(chips))),
+			items = {
+				{
+					--label = "Current Chip Balance",
+					label = string.format("You Have $%s Worth of Chips", formatNumberToCurrency(math.floor(chips))),
                     --disabled = true,
-                },
-            },
+				},
+			},
         }
     }
 
@@ -43,34 +43,34 @@ AddEventHandler("Casino:Client:StartChipPurchase", function()
             })
         end
 
-        exports['pulsar-hud']:ListMenuShow(buyMenu)
+        plsr.ListMenu:Show(buyMenu)
     else
-        exports["pulsar-hud"]:Notification("error", "Not Enough Cash - Minimum is $100")
+        plsr.Notification:Error("Not Enough Cash - Minimum is $100")
     end
 end)
 
 AddEventHandler("Casino:Client:ConfirmChipPurchase", function(data)
-    exports["pulsar-core"]:ServerCallback("Casino:BuyChips", data.amount)
+    plsr.Callbacks:ServerCallback("Casino:BuyChips", data.amount)
 end)
 
 AddEventHandler("Casino:Client:StartChipSell", function()
-    if not LocalPlayer.state.Character then
+    if not plsr.State.flags.loggedIn then
         return
     end
 
-    local cash = LocalPlayer.state.Character:GetData("Cash") or 0
-    local chips = exports['pulsar-casino']:ChipsGet()
+    local cash = plsr.State.character.Cash or 0
+    local chips = plsr.Casino.Chips:Get()
 
     local buyMenu = {
         main = {
             label = "Cash Out Casino Chips",
-            items = {
-                {
-                    --label = "Current Chip Balance",
-                    label = string.format("You Have $%s Worth of Chips", formatNumberToCurrency(math.floor(chips))),
+			items = {
+				{
+					--label = "Current Chip Balance",
+					label = string.format("You Have $%s Worth of Chips", formatNumberToCurrency(math.floor(chips))),
                     --disabled = true,
-                },
-            },
+				},
+			},
         }
     }
 
@@ -95,31 +95,33 @@ AddEventHandler("Casino:Client:StartChipSell", function()
             end
         end
 
-        exports['pulsar-hud']:ListMenuShow(buyMenu)
+        plsr.ListMenu:Show(buyMenu)
     else
-        exports["pulsar-hud"]:Notification("error", "No Chips to Sell")
+        plsr.Notification:Error("No Chips to Sell")
     end
 end)
 
 AddEventHandler("Casino:Client:ConfirmChipSell", function(data)
-    exports["pulsar-core"]:ServerCallback("Casino:SellChips", data.amount)
+    plsr.Callbacks:ServerCallback("Casino:SellChips", data.amount)
 end)
 
-exports("ChipsGet", function()
-    local chips = 0
-    if LocalPlayer.state.loggedIn and LocalPlayer.state.Character then
-        local casinoChips = LocalPlayer.state.Character:GetData("CasinoChips")
-        if casinoChips then
-            chips = tonumber(casinoChips) or 0
+_CASINO = _CASINO or {}
+
+_CASINO.Chips = {
+    Get = function(self)
+        local chips = 0
+        if plsr.State.flags.loggedIn and plsr.State.flags.loggedIn then
+            if plsr.State.character.CasinoChips and plsr.State.character.CasinoChips > 0 then
+                chips = plsr.State.character.CasinoChips
+            end
         end
-    end
 
-    return chips
-end)
-
-exports("ChipsHas", function(amount)
-    if amount > 0 then
-        return exports['pulsar-casino']:ChipsGet() >= amount
+        return chips
+    end,
+    Has = function(self, amount)
+        if amount > 0 then
+            return plsr.Casino.Chips:Get() >= amount
+        end
+        return false
     end
-    return false
-end)
+}

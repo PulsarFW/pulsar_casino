@@ -3,7 +3,7 @@ local currentlyShowing = nil
 
 function StartListMenuPrompt(menu, timeout)
     if showingListMenuPrompt then
-        exports['pulsar-hud']:ListMenuClose()
+        plsr.ListMenu:Close()
         showingListMenuPrompt:resolve({ success = false, timeout = false, data = {} })
         showingListMenuPrompt = nil
     end
@@ -11,13 +11,13 @@ function StartListMenuPrompt(menu, timeout)
     showingListMenuPrompt = promise.new()
     currentlyShowing = GetGameTimer()
 
-    exports['pulsar-hud']:ListMenuShow(menu)
+    plsr.ListMenu:Show(menu)
 
     if timeout then
         local showingAtTime = GetGameTimer()
-        SetTimeout(timeout, function()
+        Citizen.SetTimeout(timeout, function()
             if showingListMenuPrompt and currentlyShowing == showingAtTime then
-                exports['pulsar-hud']:ListMenuClose()
+                plsr.ListMenu:Close()
                 showingListMenuPrompt:resolve({ success = false, timeout = true, data = {} })
                 showingListMenuPrompt = nil
             end
