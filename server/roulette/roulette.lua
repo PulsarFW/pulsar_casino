@@ -96,8 +96,7 @@ function CheckRouletteWinners(tableId, bets, winningIndex)
         end
 
         if (winningIndex == "0" and betId == "37") or (winningIndex == "00" and betId == "38") then
-            -- 12 to 1
-            totalsWon[v.Source] = math.floor(totalsWon[v.Source] + v.Amount * 12)
+            totalsWon[v.Source] = math.floor(totalsWon[v.Source] + v.Amount * 36)
         elseif 
             (betId == "39" and _rouletteGroups.Red[winningIndex]) or
             (betId == "40" and _rouletteGroups.Black[winningIndex]) or
@@ -106,11 +105,9 @@ function CheckRouletteWinners(tableId, bets, winningIndex)
             (betId == "43" and _rouletteGroups.Low[winningIndex]) or
             (betId == "44" and _rouletteGroups.High[winningIndex])
         then
-            -- 1 to 1
-            totalsWon[v.Source] = math.floor(totalsWon[v.Source] + v.Amount)
+            totalsWon[v.Source] = math.floor(totalsWon[v.Source] + v.Amount * 2)
         elseif tonumber(betId) >= 1 and tonumber(betId) <= 36 and tonumber(betId) == tonumber(winningIndex) then
-            -- 10 to 1
-            totalsWon[v.Source] = math.floor(totalsWon[v.Source] + v.Amount * 10)
+            totalsWon[v.Source] = math.floor(totalsWon[v.Source] + v.Amount * 36)
         elseif 
             (betId == "45" and _rouletteGroups.First12[winningIndex]) or
             (betId == "46" and _rouletteGroups.Second12[winningIndex]) or
@@ -119,8 +116,7 @@ function CheckRouletteWinners(tableId, bets, winningIndex)
             (betId == "49" and _rouletteGroups.TwoToOne2[winningIndex]) or
             (betId == "50" and _rouletteGroups.TwoToOne3[winningIndex])
         then
-            -- 2 to 1
-            totalsWon[v.Source] = math.floor(totalsWon[v.Source] + v.Amount * 2)
+            totalsWon[v.Source] = math.floor(totalsWon[v.Source] + v.Amount * 3)
         elseif 
             (betId == "51" and _rouletteGroups.Row1[winningIndex]) or
             (betId == "52" and _rouletteGroups.Row2[winningIndex]) or
@@ -135,8 +131,7 @@ function CheckRouletteWinners(tableId, bets, winningIndex)
             (betId == "61" and _rouletteGroups.Row11[winningIndex]) or
             (betId == "62" and _rouletteGroups.Row12[winningIndex])
         then
-            -- 5 to 1
-            totalsWon[v.Source] = math.floor(totalsWon[v.Source] + v.Amount * 5)
+            totalsWon[v.Source] = math.floor(totalsWon[v.Source] + v.Amount * 12)
         else
             totalsLost[v.Source] = math.floor(totalsLost[v.Source] + v.Amount)
         end
@@ -267,36 +262,31 @@ AddEventHandler("Casino:Server:Startup", function()
             return cb(false)
         end
 
-        local amount, betId = tonumber(data.amount), data.betId
-        if type(amount) ~= "number" or amount < 100 or not betId then
+        local amount, betId = tonumber(data.amount), tonumber(data.betId)
+        if type(amount) ~= "number" or amount < 100 or not betId or betId < 1 or betId > 62 or betId ~= math.floor(betId) then
             return cb(false)
         end
+        amount = math.floor(amount)
 
         if (amount >= 100) and _roulette[roulettePlayer.Table] and not _roulette[roulettePlayer.Table].Started and _roulette[roulettePlayer.Table].Seats[roulettePlayer.LocalChair] then
             if (_roulette[roulettePlayer.Table].Seats[roulettePlayer.LocalChair].TotalBet + amount) <= _rouletteTables[roulettePlayer.Table].maxBet then
                 if plsr.Casino.Chips:Modify(source, -amount) then
                     --SendCasinoSpentChipsPhoneNotification(source, amount)
 
-                    if amount > 10000 then
-                        local shit = math.floor(amount / 10000)
-                        for i = 1, shit do
-                            table.insert(_roulette[roulettePlayer.Table].Bets, {
-                                betId = betId,
-                                Source = source,
-                                Amount = 10000
-                            })
-                        end
-                    else
+                    local remainingAmount = amount
+                    while remainingAmount > 0 do
+                        local chipAmount = math.min(remainingAmount, 10000)
                         table.insert(_roulette[roulettePlayer.Table].Bets, {
                             betId = betId,
                             Source = source,
-                            Amount = math.floor(amount)
+                            Amount = chipAmount
                         })
+                        remainingAmount = remainingAmount - chipAmount
                     end
 
                     UpdateRouletteGameState(roulettePlayer.Table)
 
-                    _roulette[roulettePlayer.Table].Seats[roulettePlayer.LocalChair].TotalBet += data.amount
+                    _roulette[roulettePlayer.Table].Seats[roulettePlayer.LocalChair].TotalBet += amount
 
                     TriggerClientEvent("Casino:Client:RouletteUpdateBets", -1, roulettePlayer.Table, _roulette[roulettePlayer.Table].Bets)
 

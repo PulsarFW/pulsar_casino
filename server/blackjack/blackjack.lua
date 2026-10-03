@@ -289,13 +289,28 @@ function StartBlackjackGame(tableId)
                     if v and v.Source and v.Joined then
                         if v.State == "stand" then
                             local pHand = GetCurrentBlackjackHand(tableId, k)
+                            local playerNatural = pHand == 21 and #v.Cards == 2
+                            local dealerNatural = dealerHand == 21 and #_blackjack[tableId].DealerCards == 2
                             local isWin = false
                             local isPush = false
                             local isDealerBust = false
 
                             if pHand <= 21 then
-
-                                if dealerHand > 21 then
+                                if dealerNatural then
+                                    isPush = playerNatural
+                                    isWin = playerNatural
+                                    if not playerNatural then
+                                        UpdateCharacterCasinoStats(v.Source, "blackjack", false, v.Bet)
+                                        GiveCasinoFuckingMoney(v.Source, "Blackjack", v.Bet)
+                                    end
+                                elseif playerNatural then
+                                    isWin = true
+                                    if dealerHand > 21 and not sentDealerBust then
+                                        sentDealerBust = true
+                                        isDealerBust = true
+                                    end
+                                    UpdateCharacterCasinoStats(v.Source, "blackjack", true, v.Bet)
+                                elseif dealerHand > 21 then
                                     isWin = true
                                     -- Win, Dealer Bust
                                     if not sentDealerBust then
@@ -324,7 +339,8 @@ function StartBlackjackGame(tableId)
 
                                 local wonAmount = v.Bet
                                 if not isPush then
-                                    wonAmount = v.Bet * 2
+                                    wonAmount = v.Bet * (playerNatural and 2.5 or 2)
+                                    wonAmount = math.floor(wonAmount)
                                 end
 
                                 if plsr.Casino.Chips:Modify(v.Source, wonAmount) then
@@ -719,7 +735,5 @@ function getCardNumberFromCardId(cardId)
         return 10
     end
 end
-
-
 
 
