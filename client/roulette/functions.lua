@@ -175,6 +175,10 @@ function RoulettePopulateTableData(tableId)
             hoverNumbers = {(3 * i) + 1, (3 * i) + 2, (3 * i) + 3}
         })
     end
+
+    for betId, betData in ipairs(_rouletteTableData[tableId].betData) do
+        betData.betId = betId
+    end
 end
 
 function RouletteEnableCamera(tableId, state)
